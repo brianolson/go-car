@@ -11,7 +11,6 @@ import (
 	cid "github.com/ipfs/go-cid"
 	cbor "github.com/ipfs/go-ipld-cbor"
 	format "github.com/ipfs/go-ipld-format"
-	"github.com/ipfs/go-merkledag"
 
 	util "github.com/ipld/go-car/util"
 )
@@ -40,31 +39,6 @@ type carWriter struct {
 }
 
 type WalkFunc func(format.Node) ([]*format.Link, error)
-
-func WriteCar(ctx context.Context, ds format.NodeGetter, roots []cid.Cid, w io.Writer, options ...merkledag.WalkOption) error {
-	return WriteCarWithWalker(ctx, ds, roots, w, DefaultWalkFunc, options...)
-}
-
-func WriteCarWithWalker(ctx context.Context, ds format.NodeGetter, roots []cid.Cid, w io.Writer, walk WalkFunc, options ...merkledag.WalkOption) error {
-
-	h := &CarHeader{
-		Roots:   roots,
-		Version: 1,
-	}
-
-	if err := WriteHeader(h, w); err != nil {
-		return fmt.Errorf("failed to write car header: %s", err)
-	}
-
-	cw := &carWriter{ds: ds, w: w, walk: walk}
-	seen := cid.NewSet()
-	for _, r := range roots {
-		if err := merkledag.Walk(ctx, cw.enumGetLinks, r, seen.Visit, options...); err != nil {
-			return err
-		}
-	}
-	return nil
-}
 
 func DefaultWalkFunc(nd format.Node) ([]*format.Link, error) {
 	return nd.Links(), nil

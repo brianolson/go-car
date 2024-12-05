@@ -8,10 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ipfs/go-cid"
 	format "github.com/ipfs/go-ipld-format"
-	"github.com/ipfs/go-merkledag"
-	dstest "github.com/ipfs/go-merkledag/test"
 	car "github.com/ipld/go-car"
 )
 
@@ -19,58 +16,6 @@ func assertAddNodes(t *testing.T, ds format.DAGService, nds ...format.Node) {
 	for _, nd := range nds {
 		if err := ds.Add(context.Background(), nd); err != nil {
 			t.Fatal(err)
-		}
-	}
-}
-
-func TestRoundtrip(t *testing.T) {
-	ctx := context.Background()
-	dserv := dstest.Mock()
-	a := merkledag.NewRawNode([]byte("aaaa"))
-	b := merkledag.NewRawNode([]byte("bbbb"))
-	c := merkledag.NewRawNode([]byte("cccc"))
-
-	nd1 := &merkledag.ProtoNode{}
-	nd1.AddNodeLink("cat", a)
-
-	nd2 := &merkledag.ProtoNode{}
-	nd2.AddNodeLink("first", nd1)
-	nd2.AddNodeLink("dog", b)
-
-	nd3 := &merkledag.ProtoNode{}
-	nd3.AddNodeLink("second", nd2)
-	nd3.AddNodeLink("bear", c)
-
-	assertAddNodes(t, dserv, a, b, c, nd1, nd2, nd3)
-
-	buf := new(bytes.Buffer)
-	if err := car.WriteCar(context.Background(), dserv, []cid.Cid{nd3.Cid()}, buf); err != nil {
-		t.Fatal(err)
-	}
-
-	bserv := dstest.Bserv()
-	ch, err := car.LoadCar(ctx, bserv.Blockstore(), buf)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if len(ch.Roots) != 1 {
-		t.Fatal("should have one root")
-	}
-
-	if !ch.Roots[0].Equals(nd3.Cid()) {
-		t.Fatal("got wrong cid")
-	}
-
-	bs := bserv.Blockstore()
-	for _, nd := range []format.Node{a, b, c, nd1, nd2, nd3} {
-		has, err := bs.Has(ctx, nd.Cid())
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if !has {
-			t.Fatal("should have cid in blockstore")
 		}
 	}
 }
